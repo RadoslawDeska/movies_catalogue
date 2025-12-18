@@ -1,0 +1,43 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+
+{% if not movies %}
+<div class="row">
+    <div class="col">
+        <h1>No results for "{{ search_query }}"</h1>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col">
+        <h1>Search results for "{{ search_query }}"</h1>
+    </div>
+</div>
+<div class="row">
+    {% for movie in movies %}
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card h-100">
+            {% if movie.poster_path %}
+            <img class="img-fluid" src="{{ tmdb_image_url(movie.poster_path, 'w780') }}" alt="{{ movie.title }}">
+            {% else %}
+            <div class="card-img-top bg-primary-subtle d-flex align-items-center justify-content-center"
+                style="height: 100%;">
+                <span class="text-dark text-center" style="font-size:1.5em;">{{ movie.title }}</span>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <h4 class="card-title">{{ movie.title }}</h4>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('movie_details', movie_id=movie.id) }}" class="btn btn-primary">Pokaż więcej</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
+{% endblock %}
