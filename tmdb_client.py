@@ -28,7 +28,7 @@ def print_response(response):
     # pretty-print
     print(json.dumps(data, indent=4, sort_keys=True))
 
-
+## MOVIES ##
 def get_movies(how_many, list_type="popular"):
     data = []
     current_page = 1
@@ -54,7 +54,7 @@ def get_movies(how_many, list_type="popular"):
             break
 
     # randomize the order
-    random.shuffle(data)
+    # random.shuffle(data)
 
     return data[:how_many]
 
@@ -70,6 +70,24 @@ def get_movies_list(list_type, page: int = 1):
     return get_json(f"https://api.themoviedb.org/3/movie/{list_type}?page={page}")
 
 
+## TV SHOWS ##
+def get_tv_shows_list(list_type, page: int = 1):
+    try:
+        page = int(page)
+    except (ValueError, TypeError):
+        raise ValueError("page must be an integer")
+    if page < 1:
+        page = 1
+
+    return get_json(f"https://api.themoviedb.org/3/tv/{list_type}?page={page}")
+
+
+def get_airing_today():
+    response = get_tv_shows_list("airing_today")
+    return response["results"] if "results" in response else []
+
+
+## POSTERS ##
 def get_poster_url(poster_path, size="w342"):
     base_url = "https://image.tmdb.org/t/p/"
     if poster_path:
@@ -98,3 +116,4 @@ def search(search_query):
     return get_json(
         "https://api.themoviedb.org/3/search/movie", params={"query": search_query}
     )
+

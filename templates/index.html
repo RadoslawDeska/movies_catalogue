@@ -10,6 +10,24 @@
     <!-- Bootstrap core CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <style>
+        .flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .flash-overlay .alert {
+            pointer-events: auto;
+            margin-top: 10px;
+            max-width: 90%;
+        }
+    </style>
 </head>
 
 <body>
@@ -22,8 +40,14 @@
                 aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="{{ url_for('homepage') }}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Link</a></li>
+                    <li class="nav-item"><a class="nav-link active" aria-current="page"
+                            href="{{ url_for('homepage') }}">Home</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('show_favorites') }}">Favorites</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('today') }}">Today in TV</a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">Dropdown</a>
@@ -49,10 +73,96 @@
         </div>
     </nav>
     <!-- Page Content -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="container mt-3">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
     <div class="container">
         {% block content %}
         {% endblock %}
     </div>
+
+    <script>
+        document.addEventListener("click", async function (e) {
+            const btn = e.target.closest(".favorite-toggle-btn");
+            if (!btn) return;
+
+            const movieId = btn.dataset.movieId;
+            const movieTitle = btn.dataset.movieTitle;
+
+            const response = await fetch("/favorites/toggle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ movie_id: movieId, movie_title: movieTitle })
+            });
+
+            const data = await response.json();
+
+            // Toggle the favorites icon
+            if (data.status === "added") {
+                btn.innerHTML = `
+                    <svg class="bi bi-star-fill" width="1.2em" height="1.2em" fill="#FFD700" viewBox="0 0 16 16">
+                        <path
+                            d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.283.95l-3.523 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
+                    </svg>`;
+            } else {
+                btn.innerHTML = `
+                    <svg class="bi bi-star" width="1.2em" height="1.2em" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.523-3.356c.329-.314.158-.888-.283-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767l-3.686 1.894.694-3.957a.565.565 0 0 0-.163-.505L1.71 6.745l4.052-.576a.525.525 0 0 0 .393-.288l1.847-3.658 1.846 3.658a.525.525 0 0 0 .393.288l4.052.575-2.906 2.77a.564.564 0 0 0-.163.506l.694 3.957-3.686-1.894a.503.503 0 0 0-.461 0z" />
+                    </svg>`;
+            }
+
+            // If inside /favorites and favorite is removed — remove card from DOM
+            if (data.status === "removed" && window.location.pathname === "/favorites") {
+                const card = btn.closest(".col-lg-3");
+                if (card) {
+                    card.remove();
+                }
+            }
+
+
+            // Flash overlay
+            const alert = document.createElement("div");
+            alert.className = `alert alert-${data.status === "added" ? "success" : "danger"} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            let overlay = document.querySelector(".flash-overlay");
+            if (!overlay) {
+                overlay = document.createElement("div");
+                overlay.className = "flash-overlay";
+                document.body.appendChild(overlay);
+            }
+
+            // Close existing alerts
+            document.querySelectorAll(".flash-overlay .alert").forEach(existing => {
+                const bs = new bootstrap.Alert(existing);
+                bs.close();
+            });
+
+            overlay.appendChild(alert);
+
+            // Auto-close if not dismissed manually
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 3000);
+        });
+    </script>
+
     <!-- Bootstrap core JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"

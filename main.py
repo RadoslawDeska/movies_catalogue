@@ -1,16 +1,20 @@
+import datetime
 import random
 
 import tmdb_client
 from dotenv import dotenv_values, find_dotenv
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, url_for, flash, session
 
 env_file = find_dotenv(".env")
 config_env = dotenv_values(env_file)
 
 app = Flask(__name__)
 app.config["TMDB_TOKEN"] = config_env["FLASK_MOVIEDB_API_KEYv4"]
+app.config["SECRET_KEY"] = config_env["FLASK_MOVIEDB_SECRET_KEY"]
 
 LIST_TYPES = ["top_rated", "upcoming", "popular", "now_playing"]
+
+FAVORITES = set()  # later to be changed into a database entry for logged-in user
 
 
 @app.route("/")
@@ -18,12 +22,14 @@ def homepage():
     selected_list = request.args.get("list_type", "popular")
     if selected_list not in LIST_TYPES:
         selected_list = "popular"
+    session["selected_list"] = selected_list
     movies = tmdb_client.get_movies(8, list_type=selected_list)
     return render_template(
         "homepage.html",
         movies=movies,
         list_types=LIST_TYPES,
         current_list=selected_list,
+        favorites=FAVORITES,
     )
 
 
@@ -65,6 +71,42 @@ def movie_details(movie_id):
         cast=cast,
         selected_backdrop=selected_backdrop,
     )
+
+
+@app.route("/today")
+def today():
+    movies = tmdb_client.get_airing_today()
+    today = datetime.date.today()
+    return render_template("today.html", movies=movies, today=today)
+
+
+@app.route("/favorites/toggle", methods=["POST"])
+def toggle_favorite():
+    data = request.json
+    movie_id = int(data.get("movie_id"))
+    movie_title = data.get("movie_title", "")
+
+    if movie_id in FAVORITES:
+        FAVORITES.remove(movie_id)
+        return {
+            "status": "removed",
+            "message": f'Removed "{movie_title}" from favorites.',
+        }
+    else:
+        FAVORITES.add(movie_id)
+        return {"status": "added", "message": f'Added "{movie_title}" to favorites!'}
+
+
+@app.route("/favorites")
+def show_favorites():
+    if FAVORITES:
+        movies = []
+        for movie_id in FAVORITES:
+            movie_details = tmdb_client.get_movie_details(movie_id)
+            movies.append(movie_details)
+    else:
+        movies = []
+    return render_template("homepage.html", movies=movies, favorites=FAVORITES)
 
 
 @app.context_processor
