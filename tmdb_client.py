@@ -1,17 +1,30 @@
-import requests
-import random
-from flask import current_app
 from functools import lru_cache
 
-def get_session():
+import requests
+
+
+def get_session(token=None):
+    """
+    The function takes `token` as the parameter to discern the testing mode:
+        If `token` == `None`, the token is taken from current app context.
+
+        Otherwise, the token is provided in the testing environment (`pytest`)
+
+    :param token: Description
+    """
+
     session = requests.Session()
-    token = current_app.config.get("TMDB_TOKEN")
+    if token is None:
+        from flask import current_app
+
+        token = current_app.config.get("TMDB_TOKEN")
     session.headers.update({"Authorization": f"Bearer {token}"})
     return session
 
 
-def get_json(url, params=None):
-    session = get_session()
+def get_json(url, params=None, session=None):
+    if session is None:
+        session = get_session()
     response = session.get(url, params=params)
     response.raise_for_status()
     return response.json()
@@ -27,6 +40,7 @@ def print_response(response):
         data = response
     # pretty-print
     print(json.dumps(data, indent=4, sort_keys=True))
+
 
 ## MOVIES ##
 def get_movies(how_many, list_type="popular"):
@@ -94,6 +108,7 @@ def get_poster_url(poster_path, size="w342"):
         return f"{base_url}{size}{poster_path}"
     return ""
 
+
 ## PER ID ##
 @lru_cache(maxsize=128)
 def get_movie_details(movie_id: int):
@@ -116,4 +131,3 @@ def search(search_query):
     return get_json(
         "https://api.themoviedb.org/3/search/movie", params={"query": search_query}
     )
-

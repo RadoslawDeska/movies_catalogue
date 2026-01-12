@@ -3,7 +3,7 @@ import random
 
 import tmdb_client
 from dotenv import dotenv_values, find_dotenv
-from flask import Flask, redirect, render_template, request, url_for, flash, session
+from flask import Flask, redirect, render_template, request, url_for, session
 
 env_file = find_dotenv(".env")
 config_env = dotenv_values(env_file)
