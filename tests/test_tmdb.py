@@ -1,6 +1,3 @@
-from unittest.mock import Mock
-
-import pytest
 from requests.exceptions import HTTPError
 
 import tmdb_client
@@ -26,25 +23,10 @@ __doc__ = """
 
 
 # ============ Define reusable fixture to mock session and response ============
-@pytest.fixture
-def mock_tmdb_session(monkeypatch):
-    """Creates a mock session and patches get_session"""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-
-    mock_session = Mock()
-    mock_session.get.return_value = mock_response
-
-    monkeypatch.setattr(
-        "tmdb_client.get_session", lambda: mock_session
-    )  # substitute with anonymous function returning `mock_session`
-
-    # Return both so tests can configure response and verify calls
-    return {"session": mock_session, "response": mock_response}
-
+from tests.fixtures import mock_tmdb_session
 
 # ========================== Use the fixture in tests ==========================
-
+import pytest  # the order of imports matters
 
 def test_get_movies_list(mock_tmdb_session):
     # 1. Setup: Configure what the API should "return"
